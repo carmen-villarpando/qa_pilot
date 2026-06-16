@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   qa-pilot:
-    if: !github.event.issue.pull_request && contains(github.event.comment.body, '/qa-pilot')
+    if: false  # Temporarily disabled to avoid costs - remove this line when ready
+    # if: !github.event.issue.pull_request && contains(github.event.comment.body, '/qa-pilot')
     runs-on: ubuntu-latest
     steps:
       - name: Debug event
