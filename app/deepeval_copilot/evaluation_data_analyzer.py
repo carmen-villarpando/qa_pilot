@@ -86,24 +86,67 @@ For each evaluation data entry, provide:
 3. Which metric this data should evaluate
 4. The business context (why this specific test is valuable)
 
-Format each entry as:
-Question: [specific question]
-Ground Truth: [expected response]
-Metric: [metric name]
-Business Context: [why this is valuable]
+Format each entry as CSV-ready data:
+question,ground_truth,metric_name,business_context
+"[specific question]","[expected answer]","[metric name]","[why valuable]"
 
-Generate entries that:
-- Are specific to the issue described
-- Test the actual functionality mentioned in the issue
-- Cover edge cases and important scenarios
-- Are practical and realistic for the business context"""
+Requirements:
+- Questions must be specific to the functionality described in the issue
+- Cover important business scenarios and edge cases for mortgage/payment assistance
+- Test actual user interactions mentioned in the issue
+- Ground truth answers must be accurate and complete
+- Use proper CSV escaping for quotes and commas
+- Align with the applicable metrics: {', '.join([m.name for m in applicable_metrics])}
+
+Example format:
+"Can I set up automatic transfers between my savings and checking accounts?","Yes, you can set up automatic transfers between your savings and checking accounts through online banking or by visiting a branch.","Correctness","Tests basic transfer functionality"
+
+Generate exactly 3-5 entries in CSV format."""
         
         return prompt
 
     def _parse_evaluation_data_response(self, response: str, applicable_metrics: List[MetricRecommendation]) -> List[EvaluationData]:
-        """Parse AI response into EvaluationData objects."""
+        """Parse AI CSV response into EvaluationData objects."""
         evaluation_data = []
         
+        try:
+            lines = response.strip().split("\n")
+            
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith("question,ground_truth"):
+                    continue  # Skip header and empty lines
+                
+                # Parse CSV line
+                if line.startswith('"') and '","' in line:
+                    parts = line.split('","')
+                    if len(parts) >= 4:
+                        question = parts[0].strip('"')
+                        ground_truth = parts[1].strip('"')
+                        metric_name = parts[2].strip('"')
+                        business_context = parts[3].strip('"')
+                        
+                        # Clean up any remaining quotes
+                        ground_truth = ground_truth.replace('""', '"')
+                        business_context = business_context.replace('""', '"')
+                        
+                        evaluation_data.append(EvaluationData(
+                            question=question,
+                            ground_truth=ground_truth,
+                            metric_name=metric_name,
+                            business_context=business_context
+                        ))
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse evaluation data response: {e}")
+            # Fallback: try to parse as regular format
+            return self._parse_fallback_format(response, applicable_metrics)
+        
+        return evaluation_data
+
+    def _parse_fallback_format(self, response: str, applicable_metrics: List[MetricRecommendation]) -> List[EvaluationData]:
+        """Fallback parser for non-CSV format."""
+        evaluation_data = []
         try:
             lines = response.strip().split("\n")
             current_data = {}
@@ -114,7 +157,7 @@ Generate entries that:
                     continue
                 
                 if line.startswith("Question:"):
-                    if current_data:  # Save previous entry
+                    if current_data:
                         evaluation_data.append(self._create_evaluation_data(current_data, applicable_metrics))
                     current_data = {"question": line[9:].strip()}
                 elif line.startswith("Ground Truth:"):
@@ -124,12 +167,11 @@ Generate entries that:
                 elif line.startswith("Business Context:"):
                     current_data["business_context"] = line[17:].strip()
             
-            # Don't forget the last entry
             if current_data:
                 evaluation_data.append(self._create_evaluation_data(current_data, applicable_metrics))
-            
+                
         except Exception as e:
-            logger.warning(f"Failed to parse evaluation data response: {e}")
+            logger.warning(f"Fallback parsing also failed: {e}")
         
         return evaluation_data
 

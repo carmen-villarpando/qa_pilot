@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from .models import ComponentDetection, ConversationalTestCase, PromptInjectionTest
+from .models import ComponentDetection, ConversationalTestCase, ConversationalTurn, PromptInjectionTest
 from ai_client import AIClient
 
 logger = logging.getLogger(__name__)
@@ -84,47 +84,75 @@ class ScenarioGenerator:
         if issue_body:
             context += f"Description: {issue_body[:800]}...\n"
         
-        prompt = f"""Based on the following GitHub issue, generate 3-5 detailed multi-turn conversational test cases for DeepEval evaluation.
+        prompt = f"""Based on the following GitHub issue, generate 2-3 complete conversational test cases in Python code format following this pattern:
 
 {context}
 
-For each test case, provide:
-1. Test ID: TC[1-5]
-2. Test Name: Brief descriptive name
-3. Scenario: Overall scenario description
-4. Multi-turn Conversation: User/Assistant exchanges (2-4 turns)
-5. Ground Truth: Expected behavior for each turn
-6. Evaluation Metrics: Which metrics to evaluate (Correctness, PII Leakage, Compliance, etc.)
-7. Context Requirements: Overall context needs
-8. Business Value: Why this test is valuable
+Generate test cases in this exact format:
 
-Format each test case as:
+```python
+import pytest
+from deepeval.dataset import ConversationalGolden
+from deepeval.metrics import ConversationalGEval
+from deepeval.test_case import TurnParams
 
-Test Case [ID]: [Name]
-Scenario: [overall scenario]
-Context Requirements: [list]
-Business Value: [why valuable]
+# Test Case [ID]: [Test Name]
+golden_[test_name] = ConversationalGolden(
+    name="[Test Name]",
+    scenario="[Overall scenario description]",
+    expected_outcome="[Expected behavior and outcomes]",
+    user_description="[User persona and behavior]",
+)
 
-Turn 1:
-User: [user input]
-Assistant: [expected response]
-Ground Truth: [specific requirements]
-Metrics: [metric1|metric2|metric3]
+# Evaluation Metrics
+eval_[metric_name] = ConversationalGEval(
+    name="[Metric Name]",
+    evaluation_steps=(
+        "1. [Step 1]",
+        "2. [Step 2]",
+        "3. [Step 3]",
+        "4. [Step 4]",
+    ),
+    evaluation_params=[
+        TurnParams.CONTENT,
+        TurnParams.ROLE,
+    ],
+    threshold=0.90,
+    model=local_model,
+)
 
-Turn 2:
-User: [follow-up input]
-Assistant: [expected response]
-Ground Truth: [specific requirements]  
-Metrics: [metric1|metric2]
+# Predefined conversation turns
+predefined_turns = [
+    "[Turn 1 user input]",
+    "[Turn 2 user input]", 
+    "[Turn 3 user input]",
+]
 
-Generate test cases that:
-- Include multi-turn conversations (2-4 turns each)
-- Cover core functionality, edge cases, and compliance scenarios
-- Include context retention testing
-- Address PII leakage risks
-- Test compliance with financial regulations
-- Are specific to mortgage/payment assistance domain
-- Include ground truth requirements for each turn"""
+@pytest.mark.asyncio
+async def test_[test_function_name]():
+    deepeval_project.utils.test_conversational_helpers.run_conversation_test(
+        golden=golden_[test_name],
+        eval_metric=[
+            eval_[metric_name],
+            # Add other relevant metrics
+        ],
+        label="Results:test_[test_function_name]",
+        predefined_turns=predefined_turns,
+        report_name="test_[test_function_name]",
+    )
+```
+
+Requirements for test cases:
+- Must be specific to mortgage/payment assistance domain
+- Include 2-4 predefined turns in conversation
+- Include relevant evaluation metrics (Correctness, PII Leakage, Compliance, etc.)
+- Use ConversationalGolden with scenario, expected_outcome, user_description
+- Include ConversationalGEval with detailed evaluation steps
+- Use threshold 0.90 for consistency
+- Include pytest async test function
+- Test core functionality, edge cases, and compliance scenarios
+
+Generate exactly 2-3 complete test cases in Python format."""
         
         return prompt
 
@@ -156,97 +184,153 @@ Generate tests that:
         return prompt
 
     def _parse_conversational_test_response(self, response: str) -> List[ConversationalTestCase]:
-        """Parse AI response into detailed ConversationalTestCase objects with multi-turn support."""
+        """Parse AI Python code response into ConversationalTestCase objects."""
         test_cases = []
         
         try:
-            lines = response.strip().split("\n")
-            current_test = None
-            current_turns = []
-            current_turn = None
-            
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Start new test case
-                if line.startswith("Test Case") and ":" in line:
-                    # Save previous test
-                    if current_test and current_turns:
-                        test_cases.append(ConversationalTestCase(
-                            test_id=current_test.get("test_id", ""),
-                            test_name=current_test.get("test_name", ""),
-                            scenario=current_test.get("scenario", ""),
-                            turns=current_turns,
-                            business_value=current_test.get("business_value", ""),
-                            context_requirements=current_test.get("context_requirements", [])
-                        ))
-                    
-                    # Start new test
-                    test_info = line.split(":", 1)[1].strip()
-                    parts = test_info.split(" ", 1)
-                    test_id = parts[0] if parts else ""
-                    test_name = parts[1] if len(parts) > 1 else ""
-                    
-                    current_test = {
-                        "test_id": test_id,
-                        "test_name": test_name
-                    }
-                    current_turns = []
-                    current_turn = None
-                
-                elif current_test and line.startswith("Scenario:"):
-                    current_test["scenario"] = line.split(":", 1)[1].strip()
-                
-                elif current_test and line.startswith("Context Requirements:"):
-                    reqs = line.split(":", 1)[1].strip()
-                    current_test["context_requirements"] = [r.strip() for r in reqs.split(",")]
-                
-                elif current_test and line.startswith("Business Value:"):
-                    current_test["business_value"] = line.split(":", 1)[1].strip()
-                
-                elif line.startswith("Turn") and ":" in line:
-                    # Save previous turn
-                    if current_turn:
-                        current_turns.append(current_turn)
-                    
-                    # Start new turn
-                    turn_num = line.split()[1].rstrip(":")
-                    current_turn = {"turn_id": int(turn_num)}
-                
-                elif current_turn and line.startswith("User:"):
-                    current_turn["user_input"] = line.split(":", 1)[1].strip()
-                
-                elif current_turn and line.startswith("Assistant:"):
-                    current_turn["expected_response"] = line.split(":", 1)[1].strip()
-                
-                elif current_turn and line.startswith("Ground Truth:"):
-                    requirements = line.split(":", 1)[1].strip()
-                    current_turn["ground_truth_requirements"] = [r.strip() for r in requirements.split(",")]
-                
-                elif current_turn and line.startswith("Metrics:"):
-                    metrics = line.split(":", 1)[1].strip()
-                    current_turn["evaluation_metrics"] = [m.strip() for m in metrics.split("|")]
-            
-            # Save last turn and test
-            if current_turn:
-                current_turns.append(current_turn)
-            
-            if current_test and current_turns:
-                test_cases.append(ConversationalTestCase(
-                    test_id=current_test.get("test_id", ""),
-                    test_name=current_test.get("test_name", ""),
-                    scenario=current_test.get("scenario", ""),
-                    turns=current_turns,
-                    business_value=current_test.get("business_value", ""),
-                    context_requirements=current_test.get("context_requirements", [])
-                ))
+            # Parse Python code format
+            if "ConversationalGolden(" in response:
+                test_cases = self._parse_python_test_format(response)
+            else:
+                # Fallback to simple format
+                test_cases = self._parse_simple_test_format(response)
                 
         except Exception as e:
             logger.warning(f"Failed to parse conversational test response: {e}")
             # Fallback to template
             return self._generate_template_test_cases("", "")
+        
+        return test_cases
+
+    def _parse_python_test_format(self, response: str) -> List[ConversationalTestCase]:
+        """Parse Python code format for conversational tests."""
+        test_cases = []
+        
+        # Extract ConversationalGolden definitions
+        import re
+        
+        # Find golden definitions
+        golden_pattern = r'golden_(\w+)\s*=\s*ConversationalGolden\(\s*name="([^"]+)"[^)]*scenario="([^"]+)"[^)]*expected_outcome="([^"]+)"[^)]*user_description="([^"]+)"[^)]*\)'
+        golden_matches = re.findall(golden_pattern, response, re.DOTALL)
+        
+        # Find predefined turns
+        turns_pattern = r'predefined_turns\s*=\s*\[(.*?)\]'
+        turns_matches = re.findall(turns_pattern, response, re.DOTALL)
+        
+        for i, (var_name, name, scenario, expected_outcome, user_description) in enumerate(golden_matches):
+            # Parse turns for this test
+            turns = []
+            if i < len(turns_matches):
+                turns_text = turns_matches[i]
+                # Extract individual turns
+                turn_pattern = r'"([^"]+)"'
+                turn_matches = re.findall(turn_pattern, turns_text)
+                
+                for j, turn_input in enumerate(turn_matches):
+                    turns.append(ConversationalTurn(
+                        turn_id=j+1,
+                        user_input=turn_input,
+                        expected_response="Expected response based on scenario context",
+                        evaluation_metrics=["Correctness", "Clarity"],
+                        ground_truth_requirements=["Accurate response", "Context appropriate"]
+                    ))
+            
+            test_cases.append(ConversationalTestCase(
+                test_id=f"TC{i+1}",
+                test_name=name,
+                scenario=scenario,
+                turns=turns,
+                business_value=expected_outcome,
+                context_requirements=[user_description]
+            ))
+        
+        return test_cases
+
+    def _parse_simple_test_format(self, response: str) -> List[ConversationalTestCase]:
+        """Parse simple text format for conversational tests."""
+        test_cases = []
+        lines = response.strip().split("\n")
+        current_test = None
+        current_turns = []
+        current_turn = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Start new test case
+            if line.startswith("Test Case") and ":" in line:
+                # Save previous test
+                if current_test and current_turns:
+                    test_cases.append(ConversationalTestCase(
+                        test_id=current_test.get("test_id", ""),
+                        test_name=current_test.get("test_name", ""),
+                        scenario=current_test.get("scenario", ""),
+                        turns=current_turns,
+                        business_value=current_test.get("business_value", ""),
+                        context_requirements=current_test.get("context_requirements", [])
+                    ))
+                
+                # Start new test
+                test_info = line.split(":", 1)[1].strip()
+                parts = test_info.split(" ", 1)
+                test_id = parts[0] if parts else ""
+                test_name = parts[1] if len(parts) > 1 else ""
+                
+                current_test = {
+                    "test_id": test_id,
+                    "test_name": test_name
+                }
+                current_turns = []
+                current_turn = None
+            
+            elif current_test and line.startswith("Scenario:"):
+                current_test["scenario"] = line.split(":", 1)[1].strip()
+            
+            elif current_test and line.startswith("Context Requirements:"):
+                reqs = line.split(":", 1)[1].strip()
+                current_test["context_requirements"] = [r.strip() for r in reqs.split(",")]
+            
+            elif current_test and line.startswith("Business Value:"):
+                current_test["business_value"] = line.split(":", 1)[1].strip()
+            
+            elif line.startswith("Turn") and ":" in line:
+                # Save previous turn
+                if current_turn:
+                    current_turns.append(current_turn)
+                
+                # Start new turn
+                turn_num = line.split()[1].rstrip(":")
+                current_turn = {"turn_id": int(turn_num)}
+            
+            elif current_turn and line.startswith("User:"):
+                current_turn["user_input"] = line.split(":", 1)[1].strip()
+            
+            elif current_turn and line.startswith("Assistant:"):
+                current_turn["expected_response"] = line.split(":", 1)[1].strip()
+            
+            elif current_turn and line.startswith("Ground Truth:"):
+                requirements = line.split(":", 1)[1].strip()
+                current_turn["ground_truth_requirements"] = [r.strip() for r in requirements.split(",")]
+            
+            elif current_turn and line.startswith("Metrics:"):
+                metrics = line.split(":", 1)[1].strip()
+                current_turn["evaluation_metrics"] = [m.strip() for m in metrics.split("|")]
+        
+        # Save last turn and test
+        if current_turn:
+            current_turns.append(current_turn)
+        
+        if current_test and current_turns:
+            test_cases.append(ConversationalTestCase(
+                test_id=current_test.get("test_id", ""),
+                test_name=current_test.get("test_name", ""),
+                scenario=current_test.get("scenario", ""),
+                turns=current_turns,
+                business_value=current_test.get("business_value", ""),
+                context_requirements=current_test.get("context_requirements", [])
+            ))
         
         return test_cases
 

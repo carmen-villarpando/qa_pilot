@@ -97,13 +97,39 @@ Consider whether:
 3. Business rules or compliance requirements need specific metric validation
 4. The functionality has unique quality characteristics not covered by current metrics
 
-If new metrics are needed, suggest them with:
-- Name: descriptive name for the metric
-- Description: what the metric evaluates
-- Evaluation Steps: 3-5 specific steps to evaluate
-- Reason: why this new metric is necessary for this business functionality
+If new metrics are needed, suggest them in Python code format with complete structure like:
 
-If no new metrics are needed, respond with: "No new metrics needed"
+```python
+from deepeval.metrics import GEval
+from deepeval.test_case import LLMTestCaseParams
+
+eval_new_metric = GEval(
+    name="[Metric Name]",
+    evaluation_steps=(
+        "1. [Step 1]",
+        "2. [Step 2]", 
+        "3. [Step 3]",
+        "4. [Step 4]",
+    ),
+    evaluation_params=[
+        LLMTestCaseParams.INPUT,
+        LLMTestCaseParams.ACTUAL_OUTPUT,
+        # Add other relevant params
+    ],
+    threshold=0.85,
+    model=local_model,
+)
+```
+
+Requirements for new metrics:
+- Must be specific to mortgage/payment assistance domain
+- Include 3-5 detailed evaluation steps
+- Specify relevant evaluation parameters
+- Include appropriate threshold (0.85-0.90)
+- Must address unique business risks or requirements
+- Should not duplicate existing metrics: {', '.join(existing_metric_names)}
+
+If no new metrics are needed, respond with: "No new metrics required - existing metrics adequately cover this functionality."
 
 Provide 0-2 new metric suggestions maximum, only if truly necessary."""
         
@@ -113,34 +139,82 @@ Provide 0-2 new metric suggestions maximum, only if truly necessary."""
         """Parse AI response into NewMetricSuggestion objects."""
         suggestions = []
         
-        if "No new metrics needed" in response:
+        if "No new metrics" in response:
             return suggestions
         
         try:
-            # Simple parsing for now - can be enhanced
-            lines = response.strip().split("\n")
-            current_suggestion = {}
-            
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
+            # Parse Python code format
+            if "GEval(" in response:
+                suggestions = self._parse_python_metric_format(response)
+            else:
+                # Fallback to simple text format
+                suggestions = self._parse_text_metric_format(response)
                 
-                if line.startswith("Name:"):
-                    if current_suggestion:
-                        suggestions.append(self._create_new_metric_suggestion(current_suggestion))
-                    current_suggestion = {"name": line[5:].strip()}
-                elif line.startswith("Description:"):
-                    current_suggestion["description"] = line[12:].strip()
-                elif line.startswith("Evaluation Steps:"):
-                    current_suggestion["evaluation_steps"] = []
-                elif line.startswith("-") and current_suggestion.get("evaluation_steps") is not None:
-                    current_suggestion["evaluation_steps"].append(line[1:].strip())
-                elif line.startswith("Reason:"):
-                    current_suggestion["reason_for_creation"] = line[7:].strip()
+        except Exception as e:
+            logger.warning(f"Failed to parse new metric response: {e}")
+        
+        return suggestions
+
+    def _parse_python_metric_format(self, response: str) -> List[NewMetricSuggestion]:
+        """Parse Python code format for metrics."""
+        suggestions = []
+        
+        # Extract metric definitions between GEval( and )
+        import re
+        pattern = r'eval_\w+\s*=\s*GEval\(\s*name="([^"]+)"[^)]*evaluation_steps=\(([^)]+)\)[^)]*\)'
+        matches = re.findall(pattern, response, re.DOTALL)
+        
+        for name, steps_text in matches:
+            # Parse evaluation steps
+            steps = []
+            for step in steps_text.split('\n'):
+                step = step.strip()
+                if step and (step.startswith('"') or step.startswith("'")):
+                    # Remove quotes and step number
+                    clean_step = step.strip('"\'')
+                    if '. ' in clean_step:
+                        clean_step = clean_step.split('. ', 1)[1]
+                    steps.append(clean_step)
             
-            if current_suggestion:
-                suggestions.append(self._create_new_metric_suggestion(current_suggestion))
+            # Extract description from context
+            description = f"Business-specific metric for {name}"
+            reason = f"Required for mortgage/payment assistance domain evaluation"
+            
+            suggestions.append(NewMetricSuggestion(
+                name=name.strip(),
+                description=description,
+                evaluation_steps=steps,
+                reason_for_creation=reason
+            ))
+        
+        return suggestions
+
+    def _parse_text_metric_format(self, response: str) -> List[NewMetricSuggestion]:
+        """Parse simple text format for metrics."""
+        suggestions = []
+        lines = response.strip().split("\n")
+        current_suggestion = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line.startswith("Name:"):
+                if current_suggestion:
+                    suggestions.append(self._create_new_metric_suggestion(current_suggestion))
+                current_suggestion = {"name": line[5:].strip()}
+            elif line.startswith("Description:"):
+                current_suggestion["description"] = line[12:].strip()
+            elif line.startswith("Evaluation Steps:"):
+                current_suggestion["evaluation_steps"] = []
+            elif line.startswith("-") and current_suggestion.get("evaluation_steps") is not None:
+                current_suggestion["evaluation_steps"].append(line[1:].strip())
+            elif line.startswith("Reason:"):
+                current_suggestion["reason_for_creation"] = line[7:].strip()
+        
+        if current_suggestion:
+            suggestions.append(self._create_new_metric_suggestion(current_suggestion))
             
         except Exception as e:
             logger.warning(f"Failed to parse new metric response: {e}")

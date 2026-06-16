@@ -345,28 +345,46 @@ Format each recommendation on a new line, starting with "- "."""
             lines.append("No applicable metrics identified for this issue")
             lines.append("")
         
-        # Evaluation Data Suggestions
+        # Evaluation Data Suggestions (CSV Format)
         if strategy.evaluation_data:
-            lines.append("### 📝 Suggested Evaluation Data (for CSV)")
-            for i, data in enumerate(strategy.evaluation_data, 1):
-                lines.append(f"**Entry {i}:**")
-                lines.append(f"- **Question:** {data.question}")
-                lines.append(f"- **Ground Truth:** {data.ground_truth}")
-                lines.append(f"- **Metric:** {data.metric_name}")
-                lines.append(f"- **Business Context:** {data.business_context}")
-                lines.append("")
+            lines.append("### 📝 Evaluation Data (CSV Format)")
+            lines.append("```csv")
+            lines.append("question,ground_truth,metric_name,business_context")
+            for data in strategy.evaluation_data:
+                # Escape quotes for CSV
+                question = data.question.replace('"', '""')
+                ground_truth = data.ground_truth.replace('"', '""')
+                business_context = data.business_context.replace('"', '""')
+                lines.append(f'"{question}","{ground_truth}","{data.metric_name}","{business_context}"')
+            lines.append("```")
+            lines.append("")
         
-        # New Metric Suggestions
+        # New Metric Suggestions (Python Code)
         if strategy.new_metric_suggestions:
-            lines.append("### 🆕 New Metric Suggestions")
+            lines.append("### 🆕 New Metrics (Python Implementation)")
+            lines.append("```python")
+            lines.append("from deepeval.metrics import GEval")
+            lines.append("from deepeval.test_case import LLMTestCaseParams")
+            lines.append("")
+            
             for metric in strategy.new_metric_suggestions:
-                lines.append(f"**{metric.name}**")
-                lines.append(f"- {metric.description}")
-                lines.append(f"- **Reason:** {metric.reason_for_creation}")
-                lines.append(f"- **Evaluation Steps:**")
-                for step in metric.evaluation_steps:
-                    lines.append(f"  - {step}")
+                lines.append(f"eval_{metric.name.lower().replace(' ', '_')} = GEval(")
+                lines.append(f'    name="{metric.name}",')
+                lines.append("    evaluation_steps=(")
+                for i, step in enumerate(metric.evaluation_steps, 1):
+                    lines.append(f'        "{i}. {step}",')
+                lines.append("    ),")
+                lines.append("    evaluation_params=[")
+                lines.append("        LLMTestCaseParams.INPUT,")
+                lines.append("        LLMTestCaseParams.ACTUAL_OUTPUT,")
+                lines.append("    ],")
+                lines.append("    threshold=0.85,")
+                lines.append("    model=local_model,")
+                lines.append(")")
                 lines.append("")
+            
+            lines.append("```")
+            lines.append("")
         
         # Conversational Test Cases
         if strategy.conversational_test_cases:
