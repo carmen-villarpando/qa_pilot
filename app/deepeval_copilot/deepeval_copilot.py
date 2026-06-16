@@ -218,8 +218,8 @@ class DeepEvalCopilot:
                 "Maintain evaluation baseline before and after refactoring"
             )
         
-        if metrics:
-            metric_names = [metric.name for metric in metrics]
+        if metric_recommendations:
+            metric_names = [metric.name for metric in metric_recommendations if metric.applies]
             recommendations.append(
                 f"Focus on these key metrics: {', '.join(metric_names)}"
             )
