@@ -42,19 +42,46 @@ class NewMetricSuggestion:
 
 
 @dataclass
+class ConversationalTurn:
+    """Single turn in a conversational test case."""
+    turn_id: int
+    user_input: str
+    expected_response: str
+    evaluation_metrics: List[str]  # Metrics to evaluate this turn
+    ground_truth_requirements: List[str]  # Specific requirements for this turn
+
+
+@dataclass
 class ConversationalTestCase:
-    """Specific conversational test case for business scenarios."""
+    """Business-specific conversational test case with multi-turn support."""
+    test_id: str
+    test_name: str
     scenario: str
-    expected_behavior: str
+    turns: List[ConversationalTurn]
     business_value: str
+    context_requirements: List[str]  # Overall context requirements
 
 
 @dataclass
 class PromptInjectionTest:
-    """Prompt injection test suggestion."""
+    """Enhanced prompt injection test with detailed evaluation."""
+    test_id: str
     attack_scenario: str
+    attack_type: str  # "override", "subtle", "multi_turn"
     expected_protection: str
+    evaluation_metrics: List[str]
     relevance: str
+
+
+@dataclass
+class CSVTestRow:
+    """Single row for CSV export to DeepEval."""
+    test_id: str
+    turn_id: int
+    user_input: str
+    expected_behavior: str
+    evaluation_metrics: str  # Pipe-separated metrics
+    ground_truth_requirements: str  # Pipe-separated requirements
 
 
 @dataclass

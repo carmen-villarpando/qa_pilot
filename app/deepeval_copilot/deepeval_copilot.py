@@ -371,22 +371,53 @@ Format each recommendation on a new line, starting with "- "."""
         # Conversational Test Cases
         if strategy.conversational_test_cases:
             lines.append("### 💬 Business-Specific Conversational Test Cases")
-            for i, test in enumerate(strategy.conversational_test_cases, 1):
-                lines.append(f"**Test Case {i}:**")
-                lines.append(f"- **Scenario:** {test.scenario}")
-                lines.append(f"- **Expected Behavior:** {test.expected_behavior}")
-                lines.append(f"- **Business Value:** {test.business_value}")
+            for test in strategy.conversational_test_cases:
+                lines.append(f"**{test.test_id}: {test.test_name}**")
+                lines.append(f"**Scenario:** {test.scenario}")
+                if test.context_requirements:
+                    lines.append(f"**Context Requirements:** {', '.join(test.context_requirements)}")
+                lines.append(f"**Business Value:** {test.business_value}")
+                lines.append("")
+                
+                # Show multi-turn conversation
+                for turn in test.turns:
+                    lines.append(f"**Turn {turn.turn_id}:**")
+                    lines.append(f"💬 **User:** {turn.user_input}")
+                    lines.append(f"🤖 **Assistant:** {turn.expected_response}")
+                    lines.append(f"🎯 **Ground Truth:** {', '.join(turn.ground_truth_requirements)}")
+                    lines.append(f"📊 **Metrics:** {', '.join(turn.evaluation_metrics)}")
+                    lines.append("")
                 lines.append("")
         
         # Prompt Injection Tests
         if strategy.prompt_injection_tests:
             lines.append("### 🔐 Prompt Injection Tests")
-            for i, test in enumerate(strategy.prompt_injection_tests, 1):
-                lines.append(f"**Test {i}:**")
-                lines.append(f"- **Attack Scenario:** {test.attack_scenario}")
-                lines.append(f"- **Expected Protection:** {test.expected_protection}")
-                lines.append(f"- **Relevance:** {test.relevance}")
+            for test in strategy.prompt_injection_tests:
+                lines.append(f"**{test.test_id}: {test.attack_type.title()} Attack**")
+                lines.append(f"**Attack Scenario:** {test.attack_scenario}")
+                lines.append(f"**Expected Protection:** {test.expected_protection}")
+                lines.append(f"**Evaluation Metrics:** {', '.join(test.evaluation_metrics)}")
+                lines.append(f"**Relevance:** {test.relevance}")
                 lines.append("")
+        
+        # CSV Export Format
+        if strategy.conversational_test_cases:
+            lines.append("### 📋 CSV Export Format (Ready for DeepEval)")
+            lines.append("```csv")
+            lines.append("test_id,turn_id,user_input,expected_behavior,evaluation_metrics,ground_truth_requirements")
+            
+            for test in strategy.conversational_test_cases:
+                for turn in test.turns:
+                    metrics = "|".join(turn.evaluation_metrics)
+                    requirements = "|".join(turn.ground_truth_requirements)
+                    # Escape quotes and commas for CSV
+                    user_input = f'"{turn.user_input.replace('"', '""')}"'
+                    expected = f'"{turn.expected_response.replace('"', '""')}"'
+                    
+                    lines.append(f"{test.test_id},{turn.turn_id},{user_input},{expected},{metrics},{requirements}")
+            
+            lines.append("```")
+            lines.append("")
         
         # Quality Risks
         lines.append("### ⚠️ Quality Risks")

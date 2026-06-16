@@ -8,7 +8,9 @@ from .models import (
     EvaluationData,
     NewMetricSuggestion,
     ConversationalTestCase,
+    ConversationalTurn,
     PromptInjectionTest,
+    CSVTestRow,
     QualityRisk
 )
 
@@ -20,6 +22,8 @@ __all__ = [
     "EvaluationData",
     "NewMetricSuggestion",
     "ConversationalTestCase",
+    "ConversationalTurn",
     "PromptInjectionTest",
+    "CSVTestRow",
     "QualityRisk"
 ]
