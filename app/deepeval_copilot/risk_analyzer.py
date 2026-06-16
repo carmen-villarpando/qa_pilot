@@ -96,7 +96,7 @@ class RiskAnalyzer:
             risks.append(QualityRisk(
                 level="High",
                 description="Prompt injection attacks could bypass safety measures for financial guidance",
-                mitigation "Add adversarial testing specifically for financial compliance scenarios"
+                mitigation="Add adversarial testing specifically for financial compliance scenarios"
             ))
             
             # Only include medium priority risks if relevant
@@ -104,7 +104,7 @@ class RiskAnalyzer:
                 risks.append(QualityRisk(
                     level="Medium",
                     description="Inconsistent AI responses after bug fix may confuse members",
-                    mitigation "Implement consistency testing with seed values for reproducible outputs"
+                    mitigation="Implement consistency testing with seed values for reproducible outputs"
                 ))
         
         if components.frontend and components.conversational_ai:
