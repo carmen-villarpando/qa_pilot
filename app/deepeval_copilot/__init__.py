@@ -2,16 +2,16 @@
 
 from .deepeval_copilot import DeepEvalCopilot
 from .models import (
-    DeepEvalStrategy,
     ComponentDetection,
-    MetricRecommendation,
-    EvaluationData,
-    NewMetricSuggestion,
     ConversationalTestCase,
     ConversationalTurn,
-    PromptInjectionTest,
     CSVTestRow,
-    QualityRisk
+    DeepEvalStrategy,
+    EvaluationData,
+    MetricRecommendation,
+    NewMetricSuggestion,
+    PromptInjectionTest,
+    QualityRisk,
 )
 
 __all__ = [
@@ -25,5 +25,5 @@ __all__ = [
     "ConversationalTurn",
     "PromptInjectionTest",
     "CSVTestRow",
-    "QualityRisk"
+    "QualityRisk",
 ]

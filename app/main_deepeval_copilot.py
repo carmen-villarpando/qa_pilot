@@ -5,13 +5,12 @@ import logging
 import os
 import sys
 
-from github_client import GitHubClient
 from deepeval_copilot.deepeval_copilot import DeepEvalCopilot
+from github_client import GitHubClient
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ async def main():
         comment_author = os.getenv("COMMENT_AUTHOR", "")
 
         logger.info(f"Processing issue {issue_number} in {repo_name}")
-        
+
         if not all([repo_name, issue_number, comment_body, comment_author]):
             logger.error("Missing required environment variables")
             sys.exit(1)
@@ -39,7 +38,7 @@ async def main():
         # Create GitHub client and get issue
         github_client = GitHubClient.from_env()
         issue = github_client.get_issue(repo_name, issue_number)
-        
+
         if not issue:
             logger.error(f"Could not find issue {issue_number} in {repo_name}")
             sys.exit(1)
@@ -47,7 +46,7 @@ async def main():
         title = issue.title
         body = issue.body or ""
         labels = [label.name for label in issue.get_labels()]
-        
+
         logger.info(f"Analyzing issue: '{title}'")
 
         # Add reaction to indicate processing
@@ -76,6 +75,7 @@ async def main():
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

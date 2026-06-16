@@ -1,7 +1,6 @@
 """Component detection logic for identifying Frontend, Backend, and AI components."""
 
 import logging
-from typing import Tuple
 
 from .models import ComponentDetection
 
@@ -14,46 +13,92 @@ class ComponentDetector:
     def __init__(self):
         """Initialize component detector with keyword patterns."""
         self.frontend_keywords = [
-            "ui", "interface", "button", "scroll", "widget", "chatbot widget",
-            "frontend", "client", "browser", "responsive", "mobile", "desktop",
-            "display", "render", "view", "screen", "form", "input", "click"
+            "ui",
+            "interface",
+            "button",
+            "scroll",
+            "widget",
+            "chatbot widget",
+            "frontend",
+            "client",
+            "browser",
+            "responsive",
+            "mobile",
+            "desktop",
+            "display",
+            "render",
+            "view",
+            "screen",
+            "form",
+            "input",
+            "click",
         ]
-        
+
         self.backend_keywords = [
-            "api", "endpoint", "service", "backend", "server", "database",
-            "integration", "webhook", "rest", "graphql", "microservice",
-            "auth", "authentication", "authorization", "token", "session"
+            "api",
+            "endpoint",
+            "service",
+            "backend",
+            "server",
+            "database",
+            "integration",
+            "webhook",
+            "rest",
+            "graphql",
+            "microservice",
+            "auth",
+            "authentication",
+            "authorization",
+            "token",
+            "session",
         ]
-        
+
         self.ai_keywords = [
-            "chatbot", "assistant", "conversation", "ai", "llm", "gpt",
-            "claude", "openai", "anthropic", "langchain", "prompt",
-            "context", "intent", "nlp", "natural language", "ai agent",
-            "rag", "retrieval", "embedding", "vector", "semantic"
+            "chatbot",
+            "assistant",
+            "conversation",
+            "ai",
+            "llm",
+            "gpt",
+            "claude",
+            "openai",
+            "anthropic",
+            "langchain",
+            "prompt",
+            "context",
+            "intent",
+            "nlp",
+            "natural language",
+            "ai agent",
+            "rag",
+            "retrieval",
+            "embedding",
+            "vector",
+            "semantic",
         ]
 
     def detect_components(self, title: str, body: str = "") -> ComponentDetection:
         """Detect components from issue title and body."""
         text = f"{title} {body}".lower()
-        
+
         frontend_detected = self._detect_frontend(text)
         backend_detected = self._detect_backend(text)
         ai_detected = self._detect_ai(text)
-        
+
         reasoning = self._generate_reasoning(
             frontend_detected, backend_detected, ai_detected, title
         )
-        
+
         confidence = self._calculate_confidence(
             frontend_detected, backend_detected, ai_detected, text
         )
-        
+
         return ComponentDetection(
             frontend=frontend_detected,
             backend_api=backend_detected,
             conversational_ai=ai_detected,
             reasoning=reasoning,
-            confidence=confidence
+            confidence=confidence,
         )
 
     def _detect_frontend(self, text: str) -> bool:
@@ -73,17 +118,23 @@ class ComponentDetector:
     ) -> str:
         """Generate reasoning for component detection."""
         reasons = []
-        
+
         if frontend:
-            reasons.append("Frontend UI components involved (chatbot interface, user interaction elements, or client-side display)")
+            reasons.append(
+                "Frontend UI components involved (chatbot interface, user interaction elements, or client-side display)"
+            )
         if backend:
-            reasons.append("Backend API integration required (data processing, service endpoints, or system integration)")
+            reasons.append(
+                "Backend API integration required (data processing, service endpoints, or system integration)"
+            )
         if ai:
-            reasons.append("Conversational AI/LLM components (chatbot logic, natural language processing, or AI response generation)")
-        
+            reasons.append(
+                "Conversational AI/LLM components (chatbot logic, natural language processing, or AI response generation)"
+            )
+
         if not reasons:
             reasons.append("Generic issue - no specific components detected")
-        
+
         return ". ".join(reasons) + "."
 
     def _calculate_confidence(
@@ -91,7 +142,7 @@ class ComponentDetector:
     ) -> float:
         """Calculate confidence score for component detection."""
         detected_count = sum([frontend, backend, ai])
-        
+
         if detected_count == 0:
             return 0.3  # Low confidence for generic issues
         elif detected_count == 1:

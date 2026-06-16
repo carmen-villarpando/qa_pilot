@@ -1,7 +1,5 @@
 """Tests for metric selector."""
 
-import pytest
-
 from app.deepeval_copilot.metric_selector import MetricSelector
 from app.deepeval_copilot.models import ComponentDetection
 
@@ -17,11 +15,11 @@ class TestMetricSelector:
             backend_api=True,
             conversational_ai=True,
             reasoning="All components detected",
-            confidence=0.95
+            confidence=0.95,
         )
-        
+
         metrics = selector.select_metrics(components, "Story", "Add chatbot support")
-        
+
         # Should select at least Answer Relevancy for AI
         assert len(metrics) > 0
         assert any("Answer Relevancy" in m.name for m in metrics)
@@ -34,11 +32,13 @@ class TestMetricSelector:
             backend_api=False,
             conversational_ai=True,
             reasoning="AI components detected",
-            confidence=0.7
+            confidence=0.7,
         )
-        
-        metrics = selector.select_metrics(components, "Story", "Improve conversation context management")
-        
+
+        metrics = selector.select_metrics(
+            components, "Story", "Improve conversation context management"
+        )
+
         # Should select Conversation Relevancy for conversation issues
         assert len(metrics) > 0
         assert any("Conversation Relevancy" in m.name for m in metrics)
@@ -51,11 +51,13 @@ class TestMetricSelector:
             backend_api=False,
             conversational_ai=True,
             reasoning="AI components detected",
-            confidence=0.7
+            confidence=0.7,
         )
-        
-        metrics = selector.select_metrics(components, "Story", "Implement RAG for document retrieval")
-        
+
+        metrics = selector.select_metrics(
+            components, "Story", "Implement RAG for document retrieval"
+        )
+
         # Should select Faithfulness for RAG
         assert len(metrics) > 0
         assert any("Faithfulness" in m.name for m in metrics)
@@ -68,11 +70,11 @@ class TestMetricSelector:
             backend_api=False,
             conversational_ai=False,
             reasoning="Only frontend detected",
-            confidence=0.7
+            confidence=0.7,
         )
-        
+
         metrics = selector.select_metrics(components, "Story", "Fix button styling")
-        
+
         # Should not select any metrics for non-AI issues
         assert len(metrics) == 0
 
@@ -84,11 +86,11 @@ class TestMetricSelector:
             backend_api=False,
             conversational_ai=True,
             reasoning="AI components detected",
-            confidence=0.7
+            confidence=0.7,
         )
-        
+
         metrics = selector.select_metrics(components, "Story", "Add chatbot")
-        
+
         for metric in metrics:
             assert metric.code_snippet is not None
             assert len(metric.code_snippet) > 0
@@ -103,11 +105,11 @@ class TestMetricSelector:
             backend_api=False,
             conversational_ai=True,
             reasoning="AI components detected",
-            confidence=0.7
+            confidence=0.7,
         )
-        
+
         metrics = selector.select_metrics(components, "Story", "Add chatbot")
-        
+
         for metric in metrics:
             assert metric.reason is not None
             assert len(metric.reason) > 0

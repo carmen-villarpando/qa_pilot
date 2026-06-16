@@ -35,10 +35,14 @@ class GitHubClient:
                 return False
 
             issue.create_comment(comment)
-            logger.info(f"Successfully added comment to issue {issue_number} in {repo_name}")
+            logger.info(
+                f"Successfully added comment to issue {issue_number} in {repo_name}"
+            )
             return True
         except GithubException as e:
-            logger.error(f"Error adding comment to issue {issue_number} in {repo_name}: {e}")
+            logger.error(
+                f"Error adding comment to issue {issue_number} in {repo_name}: {e}"
+            )
             return False
 
     def get_repo_labels(self, repo_name: str) -> list[str]:
