@@ -15,20 +15,46 @@ class ComponentDetection:
 
 
 @dataclass
-class DeepEvalMetric:
-    """DeepEval metric recommendation with reasoning."""
+class MetricRecommendation:
+    """Recommended metric for the issue."""
     name: str
     reason: str
-    code_snippet: str
-    threshold: float
+    applies: bool
+    priority: str  # High, Medium, Low
 
 
 @dataclass
-class EvaluationScenario:
-    """Evaluation scenario for testing."""
+class EvaluationData:
+    """Suggested evaluation data (questions and ground truth)."""
+    question: str
+    ground_truth: str
+    metric_name: str
+    business_context: str
+
+
+@dataclass
+class NewMetricSuggestion:
+    """Suggestion for a new business-specific metric."""
+    name: str
+    description: str
+    evaluation_steps: List[str]
+    reason_for_creation: str
+
+
+@dataclass
+class ConversationalTestCase:
+    """Specific conversational test case for business scenarios."""
     scenario: str
     expected_behavior: str
-    metric_type: str
+    business_value: str
+
+
+@dataclass
+class PromptInjectionTest:
+    """Prompt injection test suggestion."""
+    attack_scenario: str
+    expected_protection: str
+    relevance: str
 
 
 @dataclass
@@ -46,9 +72,22 @@ class DeepEvalStrategy:
     issue_title: str
     components: ComponentDetection
     evaluation_focus: List[str]  # What to evaluate
-    deepeval_metrics: List[DeepEvalMetric]
-    conversational_scenarios: List[EvaluationScenario]
-    prompt_injection_scenarios: List[EvaluationScenario]
-    deepeval_code: str  # Ready-to-use Python code
+    
+    # Metric analysis
+    metric_recommendations: List[MetricRecommendation]
+    new_metric_suggestions: List[NewMetricSuggestion]
+    
+    # Evaluation data
+    evaluation_data: List[EvaluationData]  # Questions + ground truth for CSV
+    
+    # Test cases
+    conversational_test_cases: List[ConversationalTestCase]
+    prompt_injection_tests: List[PromptInjectionTest]
+    
+    # Risk and recommendations
     quality_risks: List[QualityRisk]
     recommendations: List[str]
+    
+    # Overall assessment
+    provides_evaluation_value: bool  # Whether this issue provides value for evaluation
+    value_assessment: str  # Explanation of why/why not

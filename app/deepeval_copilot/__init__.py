@@ -1,13 +1,25 @@
 """DeepEval Copilot module for AI-powered evaluation strategy generation."""
 
 from .deepeval_copilot import DeepEvalCopilot
-from .models import DeepEvalStrategy, ComponentDetection, DeepEvalMetric, EvaluationScenario, QualityRisk
+from .models import (
+    DeepEvalStrategy,
+    ComponentDetection,
+    MetricRecommendation,
+    EvaluationData,
+    NewMetricSuggestion,
+    ConversationalTestCase,
+    PromptInjectionTest,
+    QualityRisk
+)
 
 __all__ = [
     "DeepEvalCopilot",
     "DeepEvalStrategy",
     "ComponentDetection",
-    "DeepEvalMetric",
-    "EvaluationScenario",
+    "MetricRecommendation",
+    "EvaluationData",
+    "NewMetricSuggestion",
+    "ConversationalTestCase",
+    "PromptInjectionTest",
     "QualityRisk"
 ]

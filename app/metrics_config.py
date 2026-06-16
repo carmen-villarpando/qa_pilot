@@ -88,7 +88,8 @@ def _parse_metrics_file() -> Dict:
             "description": description,
             "evaluation_steps": evaluation_steps,
             "threshold": threshold,
-            "evaluation_params": params
+            "evaluation_params": params,
+            "context_keywords": CONTEXT_KEYWORDS.get(metric_name, [])
         }
     
     _CACHED_METRICS = metrics

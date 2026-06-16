@@ -8,7 +8,9 @@ from deepeval_copilot.component_detector import ComponentDetector
 from deepeval_copilot.metric_selector import MetricSelector
 from deepeval_copilot.risk_analyzer import RiskAnalyzer
 from deepeval_copilot.scenario_generator import ScenarioGenerator
-from deepeval_copilot.artifact_generator import ArtifactGenerator
+from deepeval_copilot.evaluation_data_analyzer import EvaluationDataAnalyzer
+from deepeval_copilot.new_metric_analyzer import NewMetricAnalyzer
+from deepeval_copilot.value_analyzer import ValueAnalyzer
 from ai_client import AIClient
 
 logger = logging.getLogger(__name__)
@@ -21,13 +23,16 @@ class DeepEvalCopilot:
         """Initialize DeepEval Copilot with all components.
         
         Args:
-            ai_client: Optional AI client for enhanced scenario generation
+            ai_client: Optional AI client for enhanced analysis
         """
+        self.ai_client = ai_client
         self.component_detector = ComponentDetector()
         self.metric_selector = MetricSelector()
         self.risk_analyzer = RiskAnalyzer()
-        self.scenario_generator = ScenarioGenerator()
-        self.artifact_generator = ArtifactGenerator()
+        self.scenario_generator = ScenarioGenerator(ai_client)
+        self.evaluation_data_analyzer = EvaluationDataAnalyzer(ai_client)
+        self.new_metric_analyzer = NewMetricAnalyzer(ai_client)
+        self.value_analyzer = ValueAnalyzer(ai_client)
         self.ai_client = ai_client
         
         logger.info("DeepEval Copilot initialized")
@@ -58,49 +63,88 @@ class DeepEvalCopilot:
         issue_type = self.risk_analyzer.determine_issue_type(title, labels)
         logger.info(f"Issue type: {issue_type}")
         
-        # Step 2: Metric Selection
-        metrics = self.metric_selector.select_metrics(components, issue_type, title, body)
-        logger.info(f"Metrics selected: {len(metrics)}")
+        # Step 2: Analyze if issue provides evaluation value
+        provides_value, value_assessment = self.value_analyzer.analyze_evaluation_value(
+            components, title, body, issue_type
+        )
+        logger.info(f"Provides evaluation value: {provides_value} - {value_assessment}")
         
-        # Step 3: Risk Analysis
+        # If no value, return early with minimal strategy
+        if not provides_value:
+            return DeepEvalStrategy(
+                issue_type=issue_type,
+                issue_title=title,
+                components=components,
+                evaluation_focus=[],
+                metric_recommendations=[],
+                new_metric_suggestions=[],
+                evaluation_data=[],
+                conversational_test_cases=[],
+                prompt_injection_tests=[],
+                quality_risks=[],
+                recommendations=[f"This issue does not provide evaluation value: {value_assessment}"],
+                provides_evaluation_value=False,
+                value_assessment=value_assessment
+            )
+        
+        # Step 3: Metric Applicability Analysis
+        metric_recommendations = self.metric_selector.analyze_metric_applicability(
+            components, issue_type, title, body
+        )
+        logger.info(f"Metric recommendations: {len(metric_recommendations)}")
+        
+        # Step 4: Risk Analysis
         risks = self.risk_analyzer.analyze_risks(components, issue_type, title)
         logger.info(f"Risks identified: {len(risks)}")
         
-        # Steps 7-8: Scenario Generation
-        conversational_scenarios = self.scenario_generator.generate_scenarios(
+        # Step 5: Evaluation Data Suggestions
+        evaluation_data = self.evaluation_data_analyzer.suggest_evaluation_data(
+            components, metric_recommendations, title, body
+        )
+        logger.info(f"Evaluation data suggested: {len(evaluation_data)}")
+        
+        # Step 6: New Metric Analysis
+        new_metric_suggestions = self.new_metric_analyzer.analyze_new_metric_needs(
+            components, title, body, metric_recommendations
+        )
+        logger.info(f"New metric suggestions: {len(new_metric_suggestions)}")
+        
+        # Step 7: Conversational Test Cases
+        conversational_test_cases = self.scenario_generator.generate_conversational_test_cases(
             components, title, body
         )
-        logger.info(f"Conversational scenarios: {len(conversational_scenarios)}")
+        logger.info(f"Conversational test cases: {len(conversational_test_cases)}")
         
-        prompt_injection_scenarios = self.scenario_generator.generate_prompt_injection_scenarios(
-            components, title
+        # Step 8: Prompt Injection Tests
+        prompt_injection_tests = self.scenario_generator.generate_prompt_injection_tests(
+            components, title, body
         )
-        logger.info(f"Prompt injection scenarios: {len(prompt_injection_scenarios)}")
+        logger.info(f"Prompt injection tests: {len(prompt_injection_tests)}")
         
         # Determine evaluation focus
         evaluation_focus = self._determine_evaluation_focus(components)
         
         # Generate recommendations
         recommendations = self._generate_recommendations(
-            components, metrics, risks, issue_type, title, body
+            components, metric_recommendations, risks, issue_type, title, body
         )
         
-        # Step 9: Generate DeepEval Code Artifact
+        # Generate strategy
         strategy = DeepEvalStrategy(
             issue_type=issue_type,
             issue_title=title,
             components=components,
             evaluation_focus=evaluation_focus,
-            deepeval_metrics=metrics,
-            conversational_scenarios=conversational_scenarios,
-            prompt_injection_scenarios=prompt_injection_scenarios,
-            deepeval_code="",  # Will be generated next
+            metric_recommendations=metric_recommendations,
+            new_metric_suggestions=new_metric_suggestions,
+            evaluation_data=evaluation_data,
+            conversational_test_cases=conversational_test_cases,
+            prompt_injection_tests=prompt_injection_tests,
             quality_risks=risks,
-            recommendations=recommendations
+            recommendations=recommendations,
+            provides_evaluation_value=True,
+            value_assessment=value_assessment
         )
-        
-        # Generate the actual code artifact
-        strategy.deepeval_code = self.artifact_generator.generate_deepeval_code(strategy)
         
         logger.info("DeepEval strategy analysis complete")
         return strategy
@@ -126,7 +170,7 @@ class DeepEvalCopilot:
     def _generate_recommendations(
         self,
         components: ComponentDetection,
-        metrics: List,
+        metric_recommendations: List,
         risks: List,
         issue_type: str,
         issue_title: str = "",
@@ -185,7 +229,7 @@ class DeepEvalCopilot:
     def _generate_context_aware_recommendations(
         self,
         components: ComponentDetection,
-        metrics: List,
+        metric_recommendations: List,
         risks: List,
         issue_type: str,
         issue_title: str,
@@ -210,8 +254,8 @@ class DeepEvalCopilot:
             component_info.append("Conversational AI")
         context_parts.append(f"Components: {', '.join(component_info)}")
         
-        metric_names = [metric.name for metric in metrics]
-        context_parts.append(f"Selected Metrics: {', '.join(metric_names)}")
+        applicable_metrics = [m.name for m in metric_recommendations if m.applies]
+        context_parts.append(f"Applicable Metrics: {', '.join(applicable_metrics)}")
         
         context = "\n".join(context_parts)
         
@@ -226,6 +270,7 @@ Generate recommendations that:
 2. Reference the actual functionality mentioned in the issue
 3. Suggest concrete testing scenarios or evaluation approaches
 4. Are practical and implementable
+5. Focus on evaluation data collection (questions, ground truth) rather than code generation
 
 Format each recommendation on a new line, starting with "- "."""
             
@@ -249,11 +294,26 @@ Format each recommendation on a new line, starting with "- "."""
         """Format strategy as a GitHub comment."""
         lines = []
         
-        lines.append("## 🤖 DeepEval Strategy Analysis")
+        lines.append("## 🤖 DeepEval Evaluation Strategy Analysis")
         lines.append("")
         lines.append(f"**Issue Type:** {strategy.issue_type}")
         lines.append(f"**Issue:** {strategy.issue_title}")
         lines.append("")
+        
+        # Value Assessment
+        lines.append("### 💡 Evaluation Value Assessment")
+        if strategy.provides_evaluation_value:
+            lines.append("✅ **This issue provides value for evaluation purposes**")
+        else:
+            lines.append("❌ **This issue does not provide evaluation value**")
+        lines.append(f"*{strategy.value_assessment}*")
+        lines.append("")
+        
+        if not strategy.provides_evaluation_value:
+            lines.append("---")
+            lines.append("")
+            lines.append("*Generated by QA Pilot*")
+            return "\n".join(lines)
         
         # Detected Components
         lines.append("### 🔍 Detected Components")
@@ -273,12 +333,60 @@ Format each recommendation on a new line, starting with "- "."""
             lines.append(f"- {focus}")
         lines.append("")
         
-        # DeepEval Metrics
-        lines.append("### 📊 Recommended DeepEval Metrics")
-        for metric in strategy.deepeval_metrics:
-            lines.append(f"**{metric.name}** (threshold: {metric.threshold})")
-            lines.append(f"- {metric.reason}")
+        # Metric Recommendations
+        lines.append("### 📊 Metric Applicability Analysis")
+        applicable_metrics = [m for m in strategy.metric_recommendations if m.applies]
+        if applicable_metrics:
+            for metric in applicable_metrics:
+                lines.append(f"✓ **{metric.name}** ({metric.priority} priority)")
+                lines.append(f"- {metric.reason}")
+                lines.append("")
+        else:
+            lines.append("No applicable metrics identified for this issue")
             lines.append("")
+        
+        # Evaluation Data Suggestions
+        if strategy.evaluation_data:
+            lines.append("### 📝 Suggested Evaluation Data (for CSV)")
+            for i, data in enumerate(strategy.evaluation_data, 1):
+                lines.append(f"**Entry {i}:**")
+                lines.append(f"- **Question:** {data.question}")
+                lines.append(f"- **Ground Truth:** {data.ground_truth}")
+                lines.append(f"- **Metric:** {data.metric_name}")
+                lines.append(f"- **Business Context:** {data.business_context}")
+                lines.append("")
+        
+        # New Metric Suggestions
+        if strategy.new_metric_suggestions:
+            lines.append("### 🆕 New Metric Suggestions")
+            for metric in strategy.new_metric_suggestions:
+                lines.append(f"**{metric.name}**")
+                lines.append(f"- {metric.description}")
+                lines.append(f"- **Reason:** {metric.reason_for_creation}")
+                lines.append(f"- **Evaluation Steps:**")
+                for step in metric.evaluation_steps:
+                    lines.append(f"  - {step}")
+                lines.append("")
+        
+        # Conversational Test Cases
+        if strategy.conversational_test_cases:
+            lines.append("### 💬 Business-Specific Conversational Test Cases")
+            for i, test in enumerate(strategy.conversational_test_cases, 1):
+                lines.append(f"**Test Case {i}:**")
+                lines.append(f"- **Scenario:** {test.scenario}")
+                lines.append(f"- **Expected Behavior:** {test.expected_behavior}")
+                lines.append(f"- **Business Value:** {test.business_value}")
+                lines.append("")
+        
+        # Prompt Injection Tests
+        if strategy.prompt_injection_tests:
+            lines.append("### 🔐 Prompt Injection Tests")
+            for i, test in enumerate(strategy.prompt_injection_tests, 1):
+                lines.append(f"**Test {i}:**")
+                lines.append(f"- **Attack Scenario:** {test.attack_scenario}")
+                lines.append(f"- **Expected Protection:** {test.expected_protection}")
+                lines.append(f"- **Relevance:** {test.relevance}")
+                lines.append("")
         
         # Quality Risks
         lines.append("### ⚠️ Quality Risks")
@@ -287,38 +395,14 @@ Format each recommendation on a new line, starting with "- "."""
             lines.append(f"- *Mitigation: {risk.mitigation}*")
             lines.append("")
         
-        # Conversational Scenarios
-        if strategy.conversational_scenarios:
-            lines.append("### 💬 Conversational Scenarios")
-            for i, scenario in enumerate(strategy.conversational_scenarios, 1):
-                lines.append(f"**Scenario {i}:** {scenario.scenario}")
-                lines.append(f"- Expected: {scenario.expected_behavior}")
-                lines.append(f"- Metric: {scenario.metric_type}")
-                lines.append("")
-        
-        # Prompt Injection Scenarios
-        if strategy.prompt_injection_scenarios:
-            lines.append("### 🔐 Prompt Injection Scenarios")
-            for i, scenario in enumerate(strategy.prompt_injection_scenarios, 1):
-                lines.append(f"**Scenario {i}:** {scenario.scenario}")
-                lines.append(f"- Expected: {scenario.expected_behavior}")
-                lines.append("")
-        
         # Recommendations
         lines.append("### 💡 Recommendations")
-        for rec in strategy.recommendations:
-            lines.append(f"- {rec}")
-        lines.append("")
-        
-        # DeepEval Code
-        lines.append("### 🐍 DeepEval Code")
-        lines.append("")
-        lines.append("```python")
-        lines.append(strategy.deepeval_code)
-        lines.append("```")
+        for recommendation in strategy.recommendations:
+            lines.append(f"- {recommendation}")
         lines.append("")
         
         lines.append("---")
+        lines.append("")
         lines.append("*Generated by QA Pilot*")
         
         return "\n".join(lines)

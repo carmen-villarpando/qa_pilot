@@ -3,68 +3,97 @@
 import logging
 from typing import List
 
-from .models import ComponentDetection, DeepEvalMetric
-from metrics_config import get_relevant_metrics, get_metric_config
+from .models import ComponentDetection, MetricRecommendation
+from metrics_config import get_all_metric_names, get_metric_config
 
 logger = logging.getLogger(__name__)
 
 
 class MetricSelector:
-    """Selects appropriate custom GEval metrics based on component detection and issue context."""
+    """Analyzes which metrics apply to the issue based on component detection and issue context."""
 
-    def select_metrics(
+    def analyze_metric_applicability(
         self,
         components: ComponentDetection,
         issue_type: str,
         issue_title: str,
         issue_body: str = ""
-    ) -> List[DeepEvalMetric]:
-        """Select appropriate custom GEval metrics based on components and issue context."""
-        selected_metrics = []
+    ) -> List[MetricRecommendation]:
+        """Analyze which custom GEval metrics apply to the specific issue."""
+        recommendations = []
         
-        # Get relevant metrics from user's custom GEval metrics
-        relevant_metric_names = get_relevant_metrics(issue_title, issue_body)
+        # Get all available metrics
+        all_metric_names = get_all_metric_names()
         
-        for metric_name in relevant_metric_names:
+        # Analyze issue context
+        text = f"{issue_title} {issue_body}".lower()
+        
+        for metric_name in all_metric_names:
             metric_config = get_metric_config(metric_name)
-            if metric_config:
-                selected_metrics.append(self._create_custom_metric(metric_name, metric_config, issue_title))
+            if not metric_config:
+                continue
+            
+            # Determine if metric applies based on context
+            applies, priority, reason = self._determine_metric_applicability(
+                metric_name, metric_config, components, issue_type, text
+            )
+            
+            recommendations.append(MetricRecommendation(
+                name=metric_config["name"],
+                reason=reason,
+                applies=applies,
+                priority=priority
+            ))
         
-        logger.info(f"Selected {len(selected_metrics)} custom GEval metrics for issue: {issue_title}")
-        return selected_metrics
+        logger.info(f"Analyzed {len(recommendations)} metrics for issue: {issue_title}")
+        return recommendations
 
-    def _create_custom_metric(self, metric_name: str, metric_config: dict, issue_title: str) -> DeepEvalMetric:
-        """Create a DeepEvalMetric from custom GEval metric configuration."""
-        # Generate GEval code snippet
-        code_snippet = self._generate_geval_code(metric_name, metric_config)
+    def _determine_metric_applicability(
+        self,
+        metric_name: str,
+        metric_config: dict,
+        components: ComponentDetection,
+        issue_type: str,
+        text: str
+    ) -> tuple:
+        """Determine if a metric applies and its priority."""
+        applies = False
+        priority = "Low"
+        reason = ""
         
-        return DeepEvalMetric(
-            name=metric_config["name"],
-            reason=f"{metric_config['description']}. Selected based on issue context: '{issue_title}'",
-            code_snippet=code_snippet,
-            threshold=metric_config["threshold"]
-        )
-
-    def _generate_geval_code(self, metric_name: str, metric_config: dict) -> str:
-        """Generate GEval metric code snippet."""
-        evaluation_steps_str = "\n        ".join([
-            f'"{step}"' for step in metric_config["evaluation_steps"]
-        ])
+        # Core metrics for financial chatbot always apply
+        core_metrics = ["correctness_metric", "compliance_metric", "pii_leakage_metric"]
+        if metric_name in core_metrics and components.conversational_ai:
+            applies = True
+            priority = "High"
+            reason = f"Core metric for financial chatbot: {metric_config.get('description', '')}"
+            return applies, priority, reason
         
-        # Handle different evaluation_params
-        evaluation_params = metric_config.get("evaluation_params", ["ACTUAL_OUTPUT"])
-        if "EXPECTED_OUTPUT" in evaluation_params:
-            params_str = "[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT]"
-        else:
-            params_str = "[LLMTestCaseParams.ACTUAL_OUTPUT]"
+        # Check for keywords in issue text
+        if "context_keywords" in metric_config:
+            for keyword in metric_config["context_keywords"]:
+                if keyword in text:
+                    applies = True
+                    priority = "Medium"
+                    reason = f"Keyword '{keyword}' found in issue: {metric_config.get('description', '')}"
+                    break
         
-        code = f"""{metric_name} = GEval(
-    name="{metric_config['name']}",
-    evaluation_steps=[
-        {evaluation_steps_str}
-    ],
-    evaluation_params={params_str},
-    threshold={metric_config['threshold']},
-    model=local_model,
-)"""
-        return code
+        # Check component-specific metrics
+        if components.conversational_ai:
+            conversational_metrics = ["professionalism_metric", "empathy_metric", "clarity_metric"]
+            if metric_name in conversational_metrics:
+                applies = True
+                priority = "Medium"
+                reason = f"Relevant for conversational AI: {metric_config.get('description', '')}"
+        
+        # Bug-specific metrics
+        if issue_type == "Bug":
+            if metric_name in ["consistency_metric", "correctness_metric"]:
+                applies = True
+                priority = "High"
+                reason = f"Critical for bug fix: {metric_config.get('description', '')}"
+        
+        if not applies:
+            reason = f"Metric does not apply to this issue context"
+        
+        return applies, priority, reason
