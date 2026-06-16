@@ -3,13 +3,13 @@
 import logging
 from typing import List, Optional
 
-from .models import DeepEvalStrategy, ComponentDetection
-from .component_detector import ComponentDetector
-from .metric_selector import MetricSelector
-from .risk_analyzer import RiskAnalyzer
-from .scenario_generator import ScenarioGenerator
-from .artifact_generator import ArtifactGenerator
-from ..ai_client import AIClient
+from deepeval_copilot.models import DeepEvalStrategy, ComponentDetection
+from deepeval_copilot.component_detector import ComponentDetector
+from deepeval_copilot.metric_selector import MetricSelector
+from deepeval_copilot.risk_analyzer import RiskAnalyzer
+from deepeval_copilot.scenario_generator import ScenarioGenerator
+from deepeval_copilot.artifact_generator import ArtifactGenerator
+from ai_client import AIClient
 
 logger = logging.getLogger(__name__)
 
