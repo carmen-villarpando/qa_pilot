@@ -51,12 +51,19 @@ class MetricSelector:
             f'"{step}"' for step in metric_config["evaluation_steps"]
         ])
         
+        # Handle different evaluation_params
+        evaluation_params = metric_config.get("evaluation_params", ["ACTUAL_OUTPUT"])
+        if "EXPECTED_OUTPUT" in evaluation_params:
+            params_str = "[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT]"
+        else:
+            params_str = "[LLMTestCaseParams.ACTUAL_OUTPUT]"
+        
         code = f"""{metric_name} = GEval(
     name="{metric_config['name']}",
     evaluation_steps=[
         {evaluation_steps_str}
     ],
-    evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+    evaluation_params={params_str},
     threshold={metric_config['threshold']},
     model=local_model,
 )"""
