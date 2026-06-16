@@ -82,7 +82,7 @@ class DeepEvalCopilot:
         
         # Generate recommendations
         recommendations = self._generate_recommendations(
-            components, metrics, risks, issue_type
+            components, metrics, risks, issue_type, title, body
         )
         
         # Step 9: Generate DeepEval Code Artifact
@@ -128,11 +128,20 @@ class DeepEvalCopilot:
         components: ComponentDetection,
         metrics: List,
         risks: List,
-        issue_type: str
+        issue_type: str,
+        issue_title: str = "",
+        issue_body: str = ""
     ) -> List[str]:
-        """Generate recommendations based on analysis."""
+        """Generate recommendations based on analysis and issue context."""
         recommendations = []
         
+        # Generate context-specific recommendations using AI
+        context_recommendations = self._generate_context_aware_recommendations(
+            components, metrics, risks, issue_type, issue_title, issue_body
+        )
+        recommendations.extend(context_recommendations)
+        
+        # Add standard recommendations
         if components.conversational_ai:
             recommendations.append(
                 "Implement DeepEval metrics for continuous monitoring of AI responses"
@@ -170,6 +179,69 @@ class DeepEvalCopilot:
             recommendations.append(
                 f"Focus on these key metrics: {', '.join(metric_names)}"
             )
+        
+        return recommendations
+
+    def _generate_context_aware_recommendations(
+        self,
+        components: ComponentDetection,
+        metrics: List,
+        risks: List,
+        issue_type: str,
+        issue_title: str,
+        issue_body: str
+    ) -> List[str]:
+        """Generate context-aware recommendations using AI."""
+        recommendations = []
+        
+        # Build context for AI
+        context_parts = []
+        context_parts.append(f"Issue: {issue_title}")
+        if issue_body:
+            context_parts.append(f"Description: {issue_body[:500]}...")
+        context_parts.append(f"Issue Type: {issue_type}")
+        
+        component_info = []
+        if components.frontend:
+            component_info.append("Frontend UI")
+        if components.backend_api:
+            component_info.append("Backend API")
+        if components.conversational_ai:
+            component_info.append("Conversational AI")
+        context_parts.append(f"Components: {', '.join(component_info)}")
+        
+        metric_names = [metric.name for metric in metrics]
+        context_parts.append(f"Selected Metrics: {', '.join(metric_names)}")
+        
+        context = "\n".join(context_parts)
+        
+        # Use AI to generate specific recommendations
+        try:
+            prompt = f"""Based on the following GitHub issue context, generate 2-3 specific, actionable recommendations for testing and evaluation:
+
+{context}
+
+Generate recommendations that:
+1. Are specific to the issue described
+2. Reference the actual functionality mentioned in the issue
+3. Suggest concrete testing scenarios or evaluation approaches
+4. Are practical and implementable
+
+Format each recommendation on a new line, starting with "- "."""
+            
+            response = self.ai_client.generate_completion(prompt)
+            
+            if response:
+                lines = response.strip().split("\n")
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        if line.startswith("- "):
+                            recommendations.append(line[2:])
+                        else:
+                            recommendations.append(line)
+        except Exception as e:
+            logger.warning(f"Failed to generate AI recommendations: {e}")
         
         return recommendations
 
