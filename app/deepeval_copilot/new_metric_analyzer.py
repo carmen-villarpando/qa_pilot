@@ -35,7 +35,7 @@ class NewMetricAnalyzer:
             prompt = self._build_new_metric_prompt(
                 components, issue_title, issue_body, existing_metrics
             )
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 suggestions = self._parse_new_metric_response(response)

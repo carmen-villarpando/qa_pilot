@@ -181,7 +181,7 @@ class DeepEvalCopilot:
         
         # Generate context-specific recommendations using AI
         context_recommendations = self._generate_context_aware_recommendations(
-            components, metrics, risks, issue_type, issue_title, issue_body
+            components, metric_recommendations, risks, issue_type, issue_title, issue_body
         )
         recommendations.extend(context_recommendations)
         
@@ -274,7 +274,7 @@ Generate recommendations that:
 
 Format each recommendation on a new line, starting with "- "."""
             
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 lines = response.strip().split("\n")

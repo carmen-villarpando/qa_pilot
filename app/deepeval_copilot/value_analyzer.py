@@ -37,7 +37,7 @@ class ValueAnalyzer:
             prompt = self._build_value_analysis_prompt(
                 components, issue_title, issue_body, issue_type
             )
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 return self._parse_value_response(response)

@@ -33,7 +33,7 @@ class ScenarioGenerator:
         # Use AI to generate business-specific test cases
         try:
             prompt = self._build_conversational_test_prompt(issue_title, issue_body)
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 return self._parse_conversational_test_response(response)
@@ -68,7 +68,7 @@ class ScenarioGenerator:
         # Use AI to generate relevant prompt injection tests
         try:
             prompt = self._build_prompt_injection_prompt(issue_title, issue_body)
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 return self._parse_prompt_injection_response(response)

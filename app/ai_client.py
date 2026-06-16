@@ -84,6 +84,40 @@ class AIClient:
                 return await self._github_models_completion(prompt, max_tokens, temperature)
             raise
 
+    def generate_completion_sync(
+        self,
+        prompt: str,
+        max_tokens: int = 1000,
+        temperature: float = 0.7
+    ) -> str:
+        """Synchronous wrapper for generate_completion.
+        
+        Args:
+            prompt: The prompt to send to the AI
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            
+        Returns:
+            Generated text response
+        """
+        import asyncio
+        
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're already in an event loop, we need to run in a thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self.generate_completion(prompt, max_tokens, temperature))
+                    return future.result()
+            else:
+                # If no loop is running, we can just run the coroutine
+                return asyncio.run(self.generate_completion(prompt, max_tokens, temperature))
+        except Exception as e:
+            logger.error(f"Error in sync completion: {e}")
+            raise
+
     async def _github_models_completion(
         self,
         prompt: str,

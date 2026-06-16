@@ -37,7 +37,7 @@ class EvaluationDataAnalyzer:
             prompt = self._build_evaluation_data_prompt(
                 components, applicable_metrics, issue_title, issue_body
             )
-            response = self.ai_client.generate_completion(prompt)
+            response = self.ai_client.generate_completion_sync(prompt)
             
             if response:
                 evaluation_data = self._parse_evaluation_data_response(response, applicable_metrics)
