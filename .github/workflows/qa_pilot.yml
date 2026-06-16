@@ -1,4 +1,4 @@
-name: DeepEval Copilot
+name: QA_Pilot
 
 on:
   issue_comment:
@@ -9,10 +9,17 @@ permissions:
   issues: write
 
 jobs:
-  deepeval-strategy:
-    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/deepeval-strategy')
+  qa-pilot:
+    if: !github.event.issue.pull_request && contains(github.event.comment.body, '/qa-pilot')
     runs-on: ubuntu-latest
     steps:
+      - name: Debug event
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Has PR: ${{ github.event.issue.pull_request }}"
+          echo "Comment body: ${{ github.event.comment.body }}"
+          echo "Contains /qa-pilot: ${{ contains(github.event.comment.body, '/qa-pilot') }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -30,14 +37,14 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: Run DeepEval Copilot
+      - name: Run QA Pilot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_MODELS_TOKEN }}
-          AI_PROVIDER: github_models
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: openai
           REPO_NAME: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
         run: |
-          uv run python app/main_deepeval_copilot.py
+          uv run python app/main_qa_pilot.py

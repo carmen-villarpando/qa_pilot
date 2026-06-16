@@ -1,12 +1,12 @@
-"""Main entry point for GitHub Actions to run DeepEval Copilot."""
+"""Main entry point for GitHub Actions to run QA Pilot."""
 
 import asyncio
 import logging
 import os
 import sys
 
-from deepeval_copilot.deepeval_copilot import DeepEvalCopilot
-from github_client import GitHubClient
+from .github_client import GitHubClient
+from .qa_pilot import QAPilot
 
 # Configure logging
 logging.basicConfig(
@@ -31,8 +31,8 @@ async def main():
             sys.exit(1)
 
         # Check if comment contains the trigger command
-        if "/deepeval-strategy" not in comment_body.lower():
-            logger.info("Comment does not contain deepeval-strategy command")
+        if "/qa-pilot" not in comment_body.lower():
+            logger.info("Comment does not contain qa-pilot command")
             sys.exit(0)
 
         # Create GitHub client and get issue
@@ -55,21 +55,21 @@ async def main():
         except Exception as e:
             logger.warning(f"Could not add reaction: {e}")
 
-        # Create DeepEval Copilot and analyze issue
-        copilot = DeepEvalCopilot.from_env()
-        strategy = copilot.analyze_issue(title, body, labels)
+        # Create QA Pilot and analyze issue
+        qa_pilot = QAPilot.from_env()
+        analysis = qa_pilot.analyze_issue(title, body, labels)
 
-        # Format strategy as GitHub comment
-        comment = copilot.format_strategy_as_comment(strategy)
+        # Format analysis as GitHub comment
+        comment = qa_pilot.format_analysis_as_comment(analysis)
 
         # Add comment to issue
         success = github_client.add_comment(repo_name, issue_number, comment)
 
         if success:
-            logger.info("DeepEval strategy comment added successfully")
+            logger.info("QA Pilot analysis comment added successfully")
             sys.exit(0)
         else:
-            logger.error("Failed to add DeepEval strategy comment")
+            logger.error("Failed to add QA Pilot analysis comment")
             sys.exit(1)
 
     except Exception as e:

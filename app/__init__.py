@@ -1,7 +1,7 @@
-"""QA Pilot - DeepEval Copilot for AI-powered evaluation strategy generation."""
+"""QA Pilot - AI-powered QA analysis for GitHub issues."""
 
 from .ai_client import AIClient
-from .deepeval_copilot import DeepEvalCopilot
 from .github_client import GitHubClient
+from .qa_pilot import QAPilot
 
-__all__ = ["DeepEvalCopilot", "GitHubClient", "AIClient"]
+__all__ = ["QAPilot", "GitHubClient", "AIClient"]
