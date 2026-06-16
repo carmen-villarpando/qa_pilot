@@ -110,16 +110,16 @@ class DeepEvalCopilot:
         focus = []
         
         if components.frontend:
-            focus.append("Frontend UI/UX")
+            focus.append("Chatbot interface usability and user interaction flow")
         if components.backend_api:
-            focus.append("Backend API Integration")
+            focus.append("API integration reliability and data processing accuracy")
         if components.conversational_ai:
-            focus.append("Conversational AI Behavior")
-            focus.append("Context Management")
-            focus.append("Response Quality")
+            focus.append("AI response quality and accuracy for financial queries")
+            focus.append("Context retention across multi-turn conversations")
+            focus.append("Safety and compliance in financial advice delivery")
         
         if not focus:
-            focus.append("General Functionality")
+            focus.append("General functionality and user experience")
         
         return focus
 
@@ -186,11 +186,11 @@ class DeepEvalCopilot:
         # Detected Components
         lines.append("### 🔍 Detected Components")
         if strategy.components.frontend:
-            lines.append("✓ **Frontend** (UI, interface, or client-side elements)")
+            lines.append("✓ **Frontend UI** (chatbot interface, user interaction elements, client-side display)")
         if strategy.components.backend_api:
-            lines.append("✓ **Backend API** (API endpoints, services, or integrations)")
+            lines.append("✓ **Backend API** (data processing, service endpoints, system integration)")
         if strategy.components.conversational_ai:
-            lines.append("✓ **Conversational AI** (chatbot, LLM, or AI agent)")
+            lines.append("✓ **Conversational AI** (chatbot logic, NLP, AI response generation)")
         lines.append("")
         lines.append(f"*{strategy.components.reasoning}*")
         lines.append("")

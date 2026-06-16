@@ -71,52 +71,74 @@ class RiskAnalyzer:
         risks = []
         title_lower = issue_title.lower()
         
+        # Contextual risk analysis based on issue content
         if components.conversational_ai:
-            # High priority risks for AI components
-            risks.append(self._create_risk("context_loss"))
-            risks.append(self._create_risk("intent_misunderstanding"))
-            risks.append(self._create_risk("prompt_injection"))
+            # Analyze specific context from issue title
+            if any(word in title_lower for word in ["mortgage", "payment", "assistance", "financial", "loan", "account"]):
+                risks.append(QualityRisk(
+                    level="High",
+                    description=f"AI may provide inaccurate financial guidance for '{issue_title}' affecting member decisions",
+                    mitigation="Validate all financial advice against BECU policies and compliance requirements"
+                ))
+                risks.append(QualityRisk(
+                    level="High",
+                    description="PII leakage risk - chatbot may expose sensitive member financial information",
+                    mitigation="Implement strict PII detection and masking for all financial data"
+                ))
             
-            # Medium priority risks
-            risks.append(self._create_risk("inconsistent_responses"))
-            risks.append(self._create_risk("hallucination"))
-            risks.append(self._create_risk("bias_fairness"))
+            # General AI risks but more contextual
+            risks.append(QualityRisk(
+                level="High",
+                description="Context loss in multi-turn financial conversations may lead to incorrect advice",
+                mitigation="Implement conversation summarization and explicit context verification"
+            ))
             
-            # Privacy risk for data-heavy applications
-            if any(word in title_lower for word in ["data", "personal", "private", "sensitive", "customer"]):
-                risks.append(self._create_risk("privacy_leakage"))
+            risks.append(QualityRisk(
+                level="High",
+                description="Prompt injection attacks could bypass safety measures for financial guidance",
+                mitigation "Add adversarial testing specifically for financial compliance scenarios"
+            ))
+            
+            # Only include medium priority risks if relevant
+            if "bug" in title_lower or "fix" in title_lower:
+                risks.append(QualityRisk(
+                    level="Medium",
+                    description="Inconsistent AI responses after bug fix may confuse members",
+                    mitigation "Implement consistency testing with seed values for reproducible outputs"
+                ))
         
-        if components.frontend:
-            # Frontend-specific risks
+        if components.frontend and components.conversational_ai:
             risks.append(QualityRisk(
                 level="Medium",
-                description="UI/UX issues may affect user interaction with AI features",
-                mitigation="Implement comprehensive UI testing and user feedback collection"
+                description="Chatbot interface usability issues may prevent members from accessing critical financial services",
+                mitigation="Conduct usability testing with actual member scenarios and accessibility requirements"
             ))
         
-        if components.backend_api:
-            # Backend-specific risks
+        if components.backend_api and components.conversational_ai:
             risks.append(QualityRisk(
                 level="Medium",
-                description="API failures or rate limiting may disrupt AI service availability",
-                mitigation="Implement retry logic, circuit breakers, and comprehensive API monitoring"
+                description="API integration failures may disrupt chatbot availability during peak usage",
+                mitigation="Implement circuit breakers and graceful degradation for AI services"
             ))
         
-        # Issue type-specific risks
+        # Issue type-specific contextual risks
         if issue_type == "Bug":
             risks.append(QualityRisk(
                 level="High",
-                description="Regression risk - bug fix may introduce new issues in AI behavior",
-                mitigation="Implement comprehensive regression testing for AI scenarios"
+                description=f"Bug fix for '{issue_title}' may introduce regressions in existing AI behavior",
+                mitigation="Run full regression suite on all existing GEval metrics before deployment"
             ))
         elif issue_type == "Tech Debt":
             risks.append(QualityRisk(
                 level="Medium",
-                description="Refactoring may inadvertently affect AI model performance or behavior",
-                mitigation="Maintain AI evaluation baseline before and after refactoring"
+                description="Refactoring may affect AI model performance or metric thresholds",
+                mitigation="Establish baseline scores for all GEval metrics before and after changes"
             ))
         
-        logger.info(f"Identified {len(risks)} quality risks for issue: {issue_title}")
+        # Limit to most relevant risks (max 5)
+        risks = risks[:5]
+        
+        logger.info(f"Identified {len(risks)} contextual quality risks for issue: {issue_title}")
         return risks
 
     def _create_risk(self, risk_key: str) -> QualityRisk:

@@ -75,11 +75,11 @@ class ComponentDetector:
         reasons = []
         
         if frontend:
-            reasons.append("Frontend components detected (UI, interface, or client-side elements)")
+            reasons.append("Frontend UI components involved (chatbot interface, user interaction elements, or client-side display)")
         if backend:
-            reasons.append("Backend API components detected (API endpoints, services, or integrations)")
+            reasons.append("Backend API integration required (data processing, service endpoints, or system integration)")
         if ai:
-            reasons.append("Conversational AI components detected (chatbot, LLM, or AI agent)")
+            reasons.append("Conversational AI/LLM components (chatbot logic, natural language processing, or AI response generation)")
         
         if not reasons:
             reasons.append("Generic issue - no specific components detected")

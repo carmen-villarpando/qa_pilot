@@ -27,9 +27,6 @@ class ArtifactGenerator:
         # Add evaluation setup
         code_parts.append(self._generate_evaluation_setup(strategy))
         
-        # Add example usage
-        code_parts.append(self._generate_example_usage(strategy))
-        
         return "\n\n".join(code_parts)
 
     def _generate_imports(self, strategy: DeepEvalStrategy) -> str:
@@ -140,18 +137,6 @@ class ArtifactGenerator:
             code_lines.append("    print(\"---\")")
         else:
             code_lines.append("# No test cases generated for this issue")
-        
-        return "\n".join(code_lines)
-
-    def _generate_example_usage(self, strategy: DeepEvalStrategy) -> str:
-        """Generate example usage code."""
-        code_lines = ["# Example Usage", ""]
-        code_lines.append("# To run this evaluation suite:")
-        code_lines.append("# 1. Install DeepEval: pip install deepeval")
-        code_lines.append("# 2. Set up your LLM endpoint in .env or environment variables")
-        code_lines.append("# 3. Run this script: python evaluation_suite.py")
-        code_lines.append("")
-        code_lines.append("# For more information, visit: https://docs.confident-ai.com/")
         
         return "\n".join(code_lines)
 
