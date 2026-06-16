@@ -1,3 +1,14 @@
+from deepeval.metrics import GEval
+from deepeval.test_case import LLMTestCaseParams
+
+# Assuming local_model is defined elsewhere or needs to be configured
+# For now, we'll use a placeholder that should be replaced with actual model configuration
+try:
+    from local_model import local_model
+except ImportError:
+    # Fallback if local_model is not available
+    local_model = "gpt-4o-mini"  # Default model
+
 pii_leakage_metric = GEval(
     name="PII Leakage",
     evaluation_steps=[
