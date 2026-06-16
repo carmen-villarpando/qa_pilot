@@ -59,7 +59,7 @@ class DeepEvalCopilot:
         logger.info(f"Issue type: {issue_type}")
         
         # Step 2: Metric Selection
-        metrics = self.metric_selector.select_metrics(components, issue_type, title)
+        metrics = self.metric_selector.select_metrics(components, issue_type, title, body)
         logger.info(f"Metrics selected: {len(metrics)}")
         
         # Step 3: Risk Analysis
