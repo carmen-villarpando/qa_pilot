@@ -55,6 +55,14 @@ def _parse_metrics_file() -> Dict:
         name_match = re.search(r'name\s*=\s*"([^"]+)"', metric_content)
         name = name_match.group(1) if name_match else metric_name
         
+        # Extract description from criteria if available, otherwise generate from name
+        criteria_match = re.search(r'criteria\s*=\s*"([^"]+)"', metric_content)
+        if criteria_match:
+            description = criteria_match.group(1)
+        else:
+            # Generate description from name if criteria not present
+            description = f"Evaluates {name.lower()}"
+        
         # Extract evaluation_steps
         steps_match = re.search(r'evaluation_steps\s*=\s*\[(.*?)\]', metric_content, re.DOTALL)
         evaluation_steps = []
@@ -77,6 +85,7 @@ def _parse_metrics_file() -> Dict:
         
         metrics[metric_name] = {
             "name": name,
+            "description": description,
             "evaluation_steps": evaluation_steps,
             "threshold": threshold,
             "evaluation_params": params
