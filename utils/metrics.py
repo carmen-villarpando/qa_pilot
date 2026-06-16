@@ -108,7 +108,7 @@ clarity_metric = GEval(
     evaluation_steps=[
         "Evaluate whether the response uses clear and direct language.",
         "Check if the explanation avoids jargon or explains it when used.",
-        "Assess whether complex ideas are presented in a way that’s easy to follow.",
+        "Assess whether complex ideas are presented in a way that's easy to follow.",
         "Identify any vague or confusing parts that reduce understanding.",
     ],
     evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
